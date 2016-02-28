@@ -155,7 +155,7 @@ int exec_command(char* input){
       
       free(*(tokens + i));
     }
-    printf("\n");
+    //printf("\n");
     free(tokens);
   }
 

@@ -196,8 +196,6 @@ int exec_command(char* input){
             0
           };
 
-          printf("user is %s\n", local_user);
-          puts("blah");
           char *argv[] = { "/bin/sh", "-c", command[0], 0 };
 
           if((status = execve(argv[0], &argv[0], env)) < 0){

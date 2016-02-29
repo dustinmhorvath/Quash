@@ -8,6 +8,7 @@
 #include "quash.h" // Putting this above the other includes allows us to ensure
 // this file's headder's #include statements are self
 // contained.
+
 #include <string.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -15,6 +16,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/wait.h>
+#include <sys/types.h>
 
 /**************************************************************************
  * Private Variables
@@ -24,6 +26,7 @@
 // to private in other languages. 
 
 #define BSIZE 256
+#define MAXPIPES 12
 
 static bool running;
 
@@ -118,70 +121,102 @@ int exec_command(char* input){
   char** tokens = str_split(input, '|');
   int status;
   int n;
-  int io[2];
-  int pid;
+  int io[MAXPIPES][2];//int io[2];
   char buf[BSIZE];
-  bool first = true;
+  int first = 1;
 
   if (tokens){
+
+
+    int count;
+    for (count = 0; *(tokens + count); count++){
+      // count the number of commands
+    }
+    pid_t pids[count];
+    // Declare pipe ints and instantiate pipes dynamically
+    if(count > 1){
+      for(int pipeindex = 0; pipeindex < (count - 1); pipeindex++){
+        pipe(io[pipeindex]);
+      }
+    }
+
+
     int i;
     for (i = 0; *(tokens + i); i++){
-          
+
       char** command = parseCommand( *(tokens + i) );
-      
-      if(!strncmp(command[0], "cd ", 3)){
-        //char *to = (char*) malloc(sizeof(command));
-        //strncpy(to, from+3, strlen(command));
 
-        puts("read cd");
-      }
-      else if(!strncmp(command[0], "set ", 4)){
-        puts("read set");
-      }
-      
-
-      else if ((pid=fork()) == 0) {
-        if(first){
-          first = false;
-
+      pids[i] = fork();
+      if ( pids[i] == 0) {
+        // Handle closing of pipes dynamically
+        // first command case (closes read end)
+        if(i == 0 && count > 1){
+          puts("I'm first and piping my output\n");
+          first = 0;
+          for(int pipeindex = 1; pipeindex < (count - 1); pipeindex++){
+            close(io[pipeindex][0]);
+            close(io[pipeindex][1]);
+            close(io[i][0]);
+          }
+          dup2(io[i][1], STDOUT_FILENO);
+        }
+        // Handle last command in pipe sequence
+        else if(i != 0 && i == count - 1){
+          puts("I'm last and piping my input\n");
+          for(int pipeindex = 0; pipeindex < (count - 1) - 1; pipeindex++){
+            close(io[pipeindex][0]);
+            close(io[pipeindex][1]);
+            close(io[i-1][1]);
+          }
+          dup2(io[i-1][0], STDIN_FILENO);
         }
 
 
-        char *env[] = {
-          local_home,
-          local_path,
-          getenv("TZ"),
-          getenv("USER"),
-          getenv("LOGNAME"),
-          0
-        };
 
+        if(!strncmp(command[0], "cd ", 3)){
+          //char *to = (char*) malloc(sizeof(command));
+          //strncpy(to, from+3, strlen(command));
 
-        puts(command[0]);
-
-
-
-
-        char *argv[] = { "/bin/sh", "-c", command[0], 0 };
-
-        if((status = execve(argv[0], &argv[0], env)) < 0){
-          puts("Error on execve.");
+          puts("read cd");
         }
+        else if(!strncmp(command[0], "set ", 4)){
+          puts("read set");
+        }
+        // If not a special case, execute using sh and env
+        else{
+          char *env[] = {
+            local_home,
+            local_path,
+            getenv("TZ"),
+            getenv("USER"),
+            getenv("LOGNAME"),
+            getenv("TERM"),
+            0
+          };
 
+          char *argv[] = { "/bin/sh", "-c", command[0], 0 };
+
+          //printf("Executing fork %d\n", i);
+          if((status = execve(argv[0], &argv[0], env)) < 0){
+            puts("Error on execve.");
+            return EXIT_FAILURE;
+          }
+        }
 
 
         exit(0);
       }
-      if ((waitpid(pid, &status, 0)) == -1) {
+      if ((waitpid(pids[i], &status, 0)) == -1) {
         fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
         return EXIT_FAILURE;
-      }
+      } 
 
 
 
 
       free(*(tokens + i));
     }
+
     //printf("\n");
     free(tokens);
   }

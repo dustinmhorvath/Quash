@@ -97,8 +97,7 @@ char** str_split(char* a_str, const char a_delim){
     size_t idx  = 0;
     char* token = strtok(a_str, delim);
 
-    while (token)
-    {
+    while (token){
       assert(idx < count);
       *(result + idx++) = strdup(token);
       token = strtok(0, delim);
@@ -127,13 +126,26 @@ int exec_command(char* input){
   if (tokens){
     int i;
     for (i = 0; *(tokens + i); i++){
-      if ((pid=fork()) == 0) {
+          
+      char** command = parseCommand( *(tokens + i) );
+      
+      if(!strncmp(command[0], "cd ", 3)){
+        //char *to = (char*) malloc(sizeof(command));
+        //strncpy(to, from+3, strlen(command));
+
+        puts("read cd");
+      }
+      else if(!strncmp(command[0], "set ", 4)){
+        puts("read set");
+      }
+      
+
+      else if ((pid=fork()) == 0) {
         if(first){
           first = false;
 
         }
 
-        char** command = parseCommand( *(tokens + i) );
 
         char *env[] = {
           local_home,
@@ -147,9 +159,6 @@ int exec_command(char* input){
 
         puts(command[0]);
 
-        if(!strcmp(command[0], "cd")){
-          puts("Compared cd");
-        }
 
 
 
@@ -190,30 +199,30 @@ int exec_command(char* input){
  */ 
 
 int main(int argc, char** argv) {
-   command_t cmd; //< Command holder argument
-   local_path = getenv("PATH");
-   local_home = getenv("HOME");
+  command_t cmd; //< Command holder argument
+  local_path = getenv("PATH");
+  local_home = getenv("HOME");
 
-   start();
+  start();
 
-   puts("Welcome to Quash!");
-   puts("Type \"exit\" to quit");
-   // Main execution loop
-   while (is_running() && get_command(&cmd, stdin)) {
-     // NOTE: I would not recommend keeping anything inside the body of
-     // this while loop. It is just an example.
-     // The commands should be parsed, then executed.
-     if (!strcmp(cmd.cmdstr, "exit") || !strcmp(cmd.cmdstr, "quit")){
-       puts("Bye");
-       terminate(); // Exit Quash
-     }
-     else{
-       exec_command(cmd.cmdstr); 
+  puts("Welcome to Quash!");
+  puts("Type \"exit\" to quit");
+  // Main execution loop
+  while (is_running() && get_command(&cmd, stdin)) {
+    // NOTE: I would not recommend keeping anything inside the body of
+    // this while loop. It is just an example.
+    // The commands should be parsed, then executed.
+    if (!strcmp(cmd.cmdstr, "exit") || !strcmp(cmd.cmdstr, "quit")){
+      puts("Bye");
+      terminate(); // Exit Quash
+    }
+    else{
+      exec_command(cmd.cmdstr); 
 
 
 
-       //puts(cmd.cmdstr); // Echo the input string
-     }
-   }
-   return EXIT_SUCCESS;
- }
+      //puts(cmd.cmdstr); // Echo the input string
+    }
+  }
+  return EXIT_SUCCESS;
+}

@@ -174,7 +174,8 @@ int exec_command(char* input){
           dup2(io[i-1][0], STDIN_FILENO);
         }
 
-        // Special cases
+        // Special cases 
+        
         if(!strncmp(command[0], "cd ", 3)){
           //char *to = (char*) malloc(sizeof(command));
           //strncpy(to, from+3, strlen(command));
@@ -184,6 +185,7 @@ int exec_command(char* input){
         else if(!strncmp(command[0], "set ", 4)){
           puts("read set");
         }
+        
         // If not a special case, execute using sh and env
         else{
           char *env[] = {
@@ -209,6 +211,7 @@ int exec_command(char* input){
       }
       free(*(tokens + i));
     }
+
     for(int i = 0; i < count; i++){
       if ((waitpid(pids[i], &status, 0)) == -1) {
         fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
@@ -219,8 +222,6 @@ int exec_command(char* input){
     //printf("\n");
     free(tokens);
   }
-
-
 }
 
 void storeEnv(){

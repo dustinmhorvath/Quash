@@ -6,8 +6,8 @@
  * Included Files
  **************************************************************************/
 #include "quash.h" // Putting this above the other includes allows us to ensure
-                   // this file's headder's #include statements are self
-                   // contained.
+// this file's headder's #include statements are self
+// contained.
 #include <string.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -27,7 +27,7 @@
 
 static bool running;
 
- /**************************************************************************
+/**************************************************************************
  * Private Functions
  ************************************************************************** 
  * Start the main loop by setting the running flag to true
@@ -40,7 +40,7 @@ static void start() {
 /**************************************************************************
  * Public Functions
  **************************************************************************/ 
- 
+
 bool is_running() {
   return running;
 }
@@ -61,62 +61,84 @@ bool get_command(command_t* cmd, FILE* in) {
     }
     else
       cmd->cmdlen = len;
-    
+
     return true;
   }
   else
     return false;
 }
 
-char** str_split(char* a_str, const char a_delim)
-{
-    char** result    = 0;
-    size_t count     = 0;
-    char* tmp        = a_str;
-    char* last_comma = 0;
-    char delim[2];
-    delim[0] = a_delim;
-    delim[1] = 0;
+char** str_split(char* a_str, const char a_delim){
+  char** result    = 0;
+  size_t count     = 0;
+  char* tmp        = a_str;
+  char* last_comma = 0;
+  char delim[2];
+  delim[0] = a_delim;
+  delim[1] = 0;
 
-    /* Count how many elements will be extracted. */
-    while (*tmp)
+  /* Count how many elements will be extracted. */
+  while (*tmp){
+    if (a_delim == *tmp)
     {
-        if (a_delim == *tmp)
-        {
-            count++;
-            last_comma = tmp;
-        }
-        tmp++;
+      count++;
+      last_comma = tmp;
     }
+    tmp++;
+  }
 
-    /* Add space for trailing token. */
-    count += last_comma < (a_str + strlen(a_str) - 1);
+  /* Add space for trailing token. */
+  count += last_comma < (a_str + strlen(a_str) - 1);
 
-    /* Add space for terminating null string so caller
-       knows where the list of returned strings ends. */
-    count++;
+  /* Add space for terminating null string so caller
+     knows where the list of returned strings ends. */
+  count++;
 
-    result = malloc(sizeof(char*) * count);
+  result = malloc(sizeof(char*) * count);
 
-    if (result)
+  if (result)
+  {
+    size_t idx  = 0;
+    char* token = strtok(a_str, delim);
+
+    while (token)
     {
-        size_t idx  = 0;
-        char* token = strtok(a_str, delim);
-
-        while (token)
-        {
-            assert(idx < count);
-            *(result + idx++) = strdup(token);
-            token = strtok(0, delim);
-        }
-        assert(idx == count - 1);
-        *(result + idx) = 0;
+      assert(idx < count);
+      *(result + idx++) = strdup(token);
+      token = strtok(0, delim);
     }
+    assert(idx == count - 1);
+    *(result + idx) = 0;
+  }
 
-    return result;
+  return result;
 }
 
+char** parseCommand(char* command){
+  return str_split(command, " ");
+}
+
+/*
+typedef struct Command {
+
+  char* commandName;
+  int argc;
+  bool background;
+  char* env[] = {
+    getenv("HOME"),
+    getenv("PATH"),
+    getenv("TZ"),
+    getenv("USER"),
+    getenv("LOGNAME"),
+    0
+  };
+
+} Command;
+
+*/
+
 int exec_command(char* input){
+  
   char** tokens = str_split(input, '|');
   int status;
   int n;
@@ -134,15 +156,27 @@ int exec_command(char* input){
           first = false;
 
         }
+        
+        char *env[] = {
+          getenv("HOME"),
+          getenv("PATH"),
+          getenv("TZ"),
+          getenv("USER"),
+          getenv("LOGNAME"),
+          0
+          };
 
-        if(status = system( *(tokens + i) ) < 0){
-          fprintf(stderr, "\nError execing. ERROR#%d:%d\n", errno, strerror_r());
-          return EXIT_FAILURE;
+
+        char** command = parseCommand( *(tokens + i) );
+        
+        char *argv[] = { "/bin/sh", "-c", command[0], 0 };
+ 
+        if((status = execve(argv[0], &argv[0], env)) < 0){
+          puts("Error on execve.");
         }
-      
-      
-      
-      
+        
+
+
         exit(0);
       }
       if ((waitpid(pid, &status, 0)) == -1) {
@@ -152,7 +186,7 @@ int exec_command(char* input){
 
 
 
-      
+
       free(*(tokens + i));
     }
     //printf("\n");
@@ -170,26 +204,26 @@ int exec_command(char* input){
  * @param argv argument vector from the command line
  * @return program exit status
  */ int main(int argc, char** argv) {
-  command_t cmd; //< Command holder argument
-  
-  start();
-  
-  puts("Welcome to Quash!");
-  puts("Type \"exit\" to quit");
-  // Main execution loop
-  while (is_running() && get_command(&cmd, stdin)) {
-    // NOTE: I would not recommend keeping anything inside the body of
-    // this while loop. It is just an example.
-    // The commands should be parsed, then executed.
-    if (!strcmp(cmd.cmdstr, "exit"))
-      terminate(); // Exit Quash
-    else{
-     exec_command(cmd.cmdstr); 
-      
-      
-      
-      //puts(cmd.cmdstr); // Echo the input string
-    }
-  }
-  return EXIT_SUCCESS;
-}
+   command_t cmd; //< Command holder argument
+
+   start();
+
+   puts("Welcome to Quash!");
+   puts("Type \"exit\" to quit");
+   // Main execution loop
+   while (is_running() && get_command(&cmd, stdin)) {
+     // NOTE: I would not recommend keeping anything inside the body of
+     // this while loop. It is just an example.
+     // The commands should be parsed, then executed.
+     if (!strcmp(cmd.cmdstr, "exit") || !strcmp(cmd.cmdstr, "exit"))
+       terminate(); // Exit Quash
+     else{
+       exec_command(cmd.cmdstr); 
+
+
+
+       //puts(cmd.cmdstr); // Echo the input string
+     }
+   }
+   return EXIT_SUCCESS;
+ }

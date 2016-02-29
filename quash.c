@@ -68,6 +68,9 @@ bool get_command(command_t* cmd, FILE* in) {
     return false;
 }
 
+char* local_path;
+char* local_home;
+
 char** str_split(char* a_str, const char a_delim){
   char** result    = 0;
   size_t count     = 0;
@@ -78,8 +81,7 @@ char** str_split(char* a_str, const char a_delim){
   delim[1] = 0;
 
   while (*tmp){
-    if (a_delim == *tmp)
-    {
+    if (a_delim == *tmp){
       count++;
       last_comma = tmp;
     }
@@ -87,13 +89,11 @@ char** str_split(char* a_str, const char a_delim){
   }
 
   count += last_comma < (a_str + strlen(a_str) - 1);
-
   count++;
 
   result = malloc(sizeof(char*) * count);
 
-  if (result)
-  {
+  if (result){
     size_t idx  = 0;
     char* token = strtok(a_str, delim);
 
@@ -152,17 +152,22 @@ int exec_command(char* input){
 
         }
 
+        char** command = parseCommand( *(tokens + i) );
+
         char *env[] = {
-          getenv("HOME"),
-          getenv("PATH"),
+          local_home,
+          local_path,
           getenv("TZ"),
           getenv("USER"),
           getenv("LOGNAME"),
           0
         };
 
+        if(!strcmp(command[0], "cd")){
+          puts("Compared cd");
+        }
 
-        char** command = parseCommand( *(tokens + i) );
+
 
         char *argv[] = { "/bin/sh", "-c", command[0], 0 };
 
@@ -198,8 +203,12 @@ int exec_command(char* input){
  * @param argc argument count from the command line
  * @param argv argument vector from the command line
  * @return program exit status
- */ int main(int argc, char** argv) {
+ */ 
+
+int main(int argc, char** argv) {
    command_t cmd; //< Command holder argument
+   local_path = getenv("PATH");
+   local_home = getenv("HOME");
 
    start();
 

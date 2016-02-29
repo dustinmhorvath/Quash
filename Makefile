@@ -2,7 +2,7 @@ STUDENTID = 2729265
 PROGNAME = quash
 
 CC = gcc --std=c99
-CFLAGS = -Wall -g -Og
+CFLAGS =  -g -Og
 
 
 ####################################################################

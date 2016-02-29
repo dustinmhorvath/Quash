@@ -72,6 +72,7 @@ bool get_command(command_t* cmd, FILE* in) {
 }
 
 char* local_path;
+char* local_term;
 char* local_home;
 
 char** str_split(char* a_str, const char a_delim){
@@ -132,7 +133,6 @@ int exec_command(char* input){
     for (count = 0; *(tokens + count); count++){
       // count the number of commands
     }
-    pid_t pids[count];
     // Declare pipe ints and instantiate pipes dynamically
     if(count > 1){
       for(int pipeindex = 0; pipeindex < (count - 1); pipeindex++){
@@ -140,9 +140,11 @@ int exec_command(char* input){
       }
     }
 
+    pid_t pids[count];
 
     int i;
-    for (i = 0; *(tokens + i); i++){
+    //for (i = 0; *(tokens + i); i++){
+    for (i = 0; i < count; i++){
 
       char** command = parseCommand( *(tokens + i) );
 
@@ -171,8 +173,7 @@ int exec_command(char* input){
           dup2(io[i-1][0], STDIN_FILENO);
         }
 
-
-
+        // Special cases
         if(!strncmp(command[0], "cd ", 3)){
           //char *to = (char*) malloc(sizeof(command));
           //strncpy(to, from+3, strlen(command));
@@ -185,18 +186,19 @@ int exec_command(char* input){
         // If not a special case, execute using sh and env
         else{
           char *env[] = {
+            local_term,
             local_home,
             local_path,
             getenv("TZ"),
             getenv("USER"),
             getenv("LOGNAME"),
-            getenv("TERM"),
             0
           };
 
+          printf("path is %s\n", local_path);
+          puts("blah");
           char *argv[] = { "/bin/sh", "-c", command[0], 0 };
 
-          //printf("Executing fork %d\n", i);
           if((status = execve(argv[0], &argv[0], env)) < 0){
             puts("Error on execve.");
             return EXIT_FAILURE;
@@ -206,15 +208,13 @@ int exec_command(char* input){
 
         exit(0);
       }
+      free(*(tokens + i));
+    }
+    for(int i = 0; i < count; i++){
       if ((waitpid(pids[i], &status, 0)) == -1) {
         fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
         return EXIT_FAILURE;
       } 
-
-
-
-
-      free(*(tokens + i));
     }
 
     //printf("\n");
@@ -224,6 +224,29 @@ int exec_command(char* input){
 
 }
 
+void storeEnv(){
+  local_path = "PATH=";
+  local_term = "TERM=";
+  local_home = "HOME=";
+  char *pathbuffer = malloc (strlen (local_path) + strlen (getenv("PATH")) + 1);
+  char *termbuffer = malloc (strlen (local_path) + strlen (getenv("TERM")) + 1);
+  char *homebuffer = malloc (strlen (local_home) + strlen (getenv("HOME")) + 1);
+  if (homebuffer == NULL) {
+    puts("Out of memory.");
+    terminate();
+  }
+  strcpy (pathbuffer, local_path);
+  strcpy (termbuffer, local_term);
+  strcpy (homebuffer, local_home);
+  strcat(pathbuffer, getenv("PATH"));
+  strcat(termbuffer, getenv("TERM"));
+  strcat(homebuffer, getenv("HOME"));
+  local_path = pathbuffer;
+  local_term = termbuffer;
+  local_home = homebuffer;
+
+
+}
 
 /**
  * Quash entry point
@@ -235,8 +258,7 @@ int exec_command(char* input){
 
 int main(int argc, char** argv) {
   command_t cmd; //< Command holder argument
-  local_path = getenv("PATH");
-  local_home = getenv("HOME");
+  storeEnv();
 
   start();
 

@@ -77,7 +77,6 @@ char** str_split(char* a_str, const char a_delim){
   delim[0] = a_delim;
   delim[1] = 0;
 
-  /* Count how many elements will be extracted. */
   while (*tmp){
     if (a_delim == *tmp)
     {
@@ -87,11 +86,8 @@ char** str_split(char* a_str, const char a_delim){
     tmp++;
   }
 
-  /* Add space for trailing token. */
   count += last_comma < (a_str + strlen(a_str) - 1);
 
-  /* Add space for terminating null string so caller
-     knows where the list of returned strings ends. */
   count++;
 
   result = malloc(sizeof(char*) * count);
@@ -119,26 +115,25 @@ char** parseCommand(char* command){
 }
 
 /*
-typedef struct Command {
+   typedef struct Command {
 
-  char* commandName;
-  int argc;
-  bool background;
-  char* env[] = {
-    getenv("HOME"),
-    getenv("PATH"),
-    getenv("TZ"),
-    getenv("USER"),
-    getenv("LOGNAME"),
-    0
-  };
+   char* commandName;
+   int argc;
+   bool background;
+   char* env[] = {
+   getenv("HOME"),
+   getenv("PATH"),
+   getenv("TZ"),
+   getenv("USER"),
+   getenv("LOGNAME"),
+   0
+   };
 
-} Command;
-
-*/
+   } Command;
+   */
 
 int exec_command(char* input){
-  
+
   char** tokens = str_split(input, '|');
   int status;
   int n;
@@ -156,7 +151,7 @@ int exec_command(char* input){
           first = false;
 
         }
-        
+
         char *env[] = {
           getenv("HOME"),
           getenv("PATH"),
@@ -164,17 +159,17 @@ int exec_command(char* input){
           getenv("USER"),
           getenv("LOGNAME"),
           0
-          };
+        };
 
 
         char** command = parseCommand( *(tokens + i) );
-        
+
         char *argv[] = { "/bin/sh", "-c", command[0], 0 };
- 
+
         if((status = execve(argv[0], &argv[0], env)) < 0){
           puts("Error on execve.");
         }
-        
+
 
 
         exit(0);
@@ -215,8 +210,10 @@ int exec_command(char* input){
      // NOTE: I would not recommend keeping anything inside the body of
      // this while loop. It is just an example.
      // The commands should be parsed, then executed.
-     if (!strcmp(cmd.cmdstr, "exit") || !strcmp(cmd.cmdstr, "exit"))
+     if (!strcmp(cmd.cmdstr, "exit") || !strcmp(cmd.cmdstr, "quit")){
+       puts("Bye");
        terminate(); // Exit Quash
+     }
      else{
        exec_command(cmd.cmdstr); 
 

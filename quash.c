@@ -73,6 +73,7 @@ bool get_command(command_t* cmd, FILE* in) {
 
 char* local_path;
 char* local_term;
+char* local_user;
 char* local_home;
 
 char** str_split(char* a_str, const char a_delim){
@@ -189,13 +190,13 @@ int exec_command(char* input){
             local_term,
             local_home,
             local_path,
+            local_user,
             getenv("TZ"),
-            getenv("USER"),
             getenv("LOGNAME"),
             0
           };
 
-          printf("path is %s\n", local_path);
+          printf("user is %s\n", local_user);
           puts("blah");
           char *argv[] = { "/bin/sh", "-c", command[0], 0 };
 
@@ -227,9 +228,11 @@ int exec_command(char* input){
 void storeEnv(){
   local_path = "PATH=";
   local_term = "TERM=";
+  local_user = "USER=";
   local_home = "HOME=";
   char *pathbuffer = malloc (strlen (local_path) + strlen (getenv("PATH")) + 1);
-  char *termbuffer = malloc (strlen (local_path) + strlen (getenv("TERM")) + 1);
+  char *termbuffer = malloc (strlen (local_term) + strlen (getenv("TERM")) + 1);
+  char *userbuffer = malloc (strlen (local_user) + strlen (getenv("USER")) + 1);
   char *homebuffer = malloc (strlen (local_home) + strlen (getenv("HOME")) + 1);
   if (homebuffer == NULL) {
     puts("Out of memory.");
@@ -237,15 +240,16 @@ void storeEnv(){
   }
   strcpy (pathbuffer, local_path);
   strcpy (termbuffer, local_term);
+  strcpy (userbuffer, local_user);
   strcpy (homebuffer, local_home);
   strcat(pathbuffer, getenv("PATH"));
   strcat(termbuffer, getenv("TERM"));
+  strcat(userbuffer, getenv("USER"));
   strcat(homebuffer, getenv("HOME"));
   local_path = pathbuffer;
   local_term = termbuffer;
+  local_user = userbuffer;
   local_home = homebuffer;
-
-
 }
 
 /**

@@ -114,24 +114,6 @@ char** parseCommand(char* command){
   return str_split(command, " ");
 }
 
-/*
-   typedef struct Command {
-
-   char* commandName;
-   int argc;
-   bool background;
-   char* env[] = {
-   getenv("HOME"),
-   getenv("PATH"),
-   getenv("TZ"),
-   getenv("USER"),
-   getenv("LOGNAME"),
-   0
-   };
-
-   } Command;
-   */
-
 int exec_command(char* input){
 
   char** tokens = str_split(input, '|');
@@ -141,7 +123,6 @@ int exec_command(char* input){
   int pid;
   char buf[BSIZE];
   bool first = true;
-
 
   if (tokens){
     int i;
@@ -162,6 +143,9 @@ int exec_command(char* input){
           getenv("LOGNAME"),
           0
         };
+
+
+        puts(command[0]);
 
         if(!strcmp(command[0], "cd")){
           puts("Compared cd");

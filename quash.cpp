@@ -24,19 +24,11 @@ public:
     0
   };
 
-  char *argv[64];
+  char* argv[64];
 
   Command(std::string input){
-    enum { kMaxArgs = 64 };
-    argc = 0;
 
-    char *p2 = strtok(input, ' ');
-    while (p2 && argc < kMaxArgs-1){
-      argv[argc++] = p2;
-      p2 = strtok(0, " ");
-    }
-    argv[argc] = 0;
-
+    // parse 'input' into argv here
 
 
     commandName = input;
@@ -52,8 +44,7 @@ int exec_command(Command command){
   int i;
 
   if ((pid=fork()) == 0) {
-    //execlp(command.argv[0], &command.argv[0]);
-    execve(argv[0], &argv[0], envp);
+    execvpe(argv[0], &argv[0], envp);
     fprintf(stderr, "ERROR\n");
     exit(0);
   }

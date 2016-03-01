@@ -53,4 +53,9 @@ void terminate();
  */
 bool get_command(command_t* cmd, FILE* in);
 
+/*Testing new execute function*/
+void run_cmd(char *cmd);
+
+
+
 #endif // QUASH_H

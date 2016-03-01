@@ -1,8 +1,8 @@
-STUDENTID = 2729265
+STUDENTID = 2729265_2761206
 PROGNAME = quash
 
 CC = gcc --std=c99
-CFLAGS =  -g -Og
+CFLAGS = -Wall -g -Og
 
 
 ####################################################################
@@ -17,7 +17,7 @@ CFILES = quash.c
 HFILES = quash.h debug.h
 
 # Add libraries that need linked as needed (e.g. -lm -lpthread)
-LIBS =
+LIBS = -D_XOPEN_SOURCE=700
 
 DOXYGENCONF = quash.doxygen
 

@@ -197,7 +197,9 @@ int exec_command(char* input){
 
       // Confirmed getting command names correctly after each pipe
       char* command = *(tokens + i);
-        if(!strncmp(command, "cd ", 3) || (!strncmp(command, "cd", 2) && strlen(command) == 2) ){
+
+      // Checks for cd. looks for no-space version too
+      if(!strncmp(command, "cd ", 3) || (!strncmp(command, "cd", 2) && strlen(command) == 2) ){
         // Cut off the "cd "
         char *truncated = (char*) malloc(sizeof(command) - 3);
         strncpy(truncated, command + 3, strlen(command));
@@ -213,6 +215,7 @@ int exec_command(char* input){
         chdir(truncated);
       }
 
+      // Checks for 'set'
       else if(!strncmp(command, "set ", 4)){
         char *truncated = (char*) malloc(sizeof(command) - 4);
         strncpy(truncated, command + 4, strlen(command));

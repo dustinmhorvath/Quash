@@ -130,6 +130,36 @@ void removeSpaces(char* source){
   *i = 0;
 }
 
+void set(char* input){
+  int length = strlen(input);
+  if(!strncmp(input, "PATH=", 5)){
+    char *pathbuffer = malloc (length + 1);
+    if (pathbuffer == NULL) {
+      puts("Out of memory.");
+      terminate();
+    }
+    strcpy (pathbuffer, input);
+    free(local_path);
+    local_path = pathbuffer;
+  }
+  else if(!strncmp(input, "HOME=", 5)){
+    char *homebuffer = malloc (length + 1);
+    if (homebuffer == NULL) {
+      puts("Out of memory.");
+      terminate();
+    }
+    puts("I got here.");
+    strcpy (homebuffer, input);
+    free(local_home);
+    local_home = homebuffer;
+    //local_home = input;
+  }
+  else{
+    puts("Invalid.");
+  }
+
+}
+
 int exec_command(char* input){
 
   char** tokens = str_split(input, '|');
@@ -171,7 +201,10 @@ int exec_command(char* input){
       }
 
       else if(!strncmp(command, "set ", 4)){
-        puts("read set");
+        char *truncated = (char*) malloc(sizeof(command) - 4);
+        strncpy(truncated, command + 4, strlen(command));
+        removeSpaces(truncated);
+        set(truncated);
       }
 
       else{
@@ -208,7 +241,7 @@ int exec_command(char* input){
           char *argv[] = { "/bin/sh", "-c", command, 0 };
 
           status = execve(argv[0], &argv[0], env);
-          
+
           exit(status);
         }
         else if( pids[i] == -1){
@@ -218,8 +251,8 @@ int exec_command(char* input){
 
       } // ends fork else
       free(*(tokens + i));
-      
-         }
+
+    }
 
     for(int pipeindex = 0; pipeindex < (numbercommands - 1); pipeindex++){
       close(io[pipeindex][0]);
@@ -229,51 +262,51 @@ int exec_command(char* input){
     for(int i = 0; i < numbercommands; i++){
       printf("waiting on pid %d\n", pids[i]);
       if (waitpid(pids[i], &status, 0) == -1) {
-      // fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
-      return EXIT_FAILURE;
+        // fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
+        return EXIT_FAILURE;
       } 
     }
 
     //printf("\n");
     free(tokens);
-    }
   }
+}
 
-  void storeEnv(){
-    local_path = "PATH=";
-    local_term = "TERM=";
-    local_user = "USER=";
-    local_home = "HOME=";
-    char *pathbuffer = malloc (strlen (local_path) + strlen (getenv("PATH")) + 1);
-    char *termbuffer = malloc (strlen (local_term) + strlen (getenv("TERM")) + 1);
-    char *userbuffer = malloc (strlen (local_user) + strlen (getenv("USER")) + 1);
-    char *homebuffer = malloc (strlen (local_home) + strlen (getenv("HOME")) + 1);
-    if (homebuffer == NULL) {
-      puts("Out of memory.");
-      terminate();
-    }
-    strcpy (pathbuffer, local_path);
-    strcpy (termbuffer, local_term);
-    strcpy (userbuffer, local_user);
-    strcpy (homebuffer, local_home);
-    strcat(pathbuffer, getenv("PATH"));
-    strcat(termbuffer, getenv("TERM"));
-    strcat(userbuffer, getenv("USER"));
-    strcat(homebuffer, getenv("HOME"));
-    local_path = pathbuffer;
-    local_term = termbuffer;
-    local_user = userbuffer;
-    local_home = homebuffer;
-
+void storeEnv(){
+  local_path = "PATH=";
+  local_term = "TERM=";
+  local_user = "USER=";
+  local_home = "HOME=";
+  char *pathbuffer = malloc (strlen (local_path) + strlen (getenv("PATH")) + 1);
+  char *termbuffer = malloc (strlen (local_term) + strlen (getenv("TERM")) + 1);
+  char *userbuffer = malloc (strlen (local_user) + strlen (getenv("USER")) + 1);
+  char *homebuffer = malloc (strlen (local_home) + strlen (getenv("HOME")) + 1);
+  if (homebuffer == NULL) {
+    puts("Out of memory.");
+    terminate();
   }
+  strcpy (pathbuffer, local_path);
+  strcpy (termbuffer, local_term);
+  strcpy (userbuffer, local_user);
+  strcpy (homebuffer, local_home);
+  strcat(pathbuffer, getenv("PATH"));
+  strcat(termbuffer, getenv("TERM"));
+  strcat(userbuffer, getenv("USER"));
+  strcat(homebuffer, getenv("HOME"));
+  local_path = pathbuffer;
+  local_term = termbuffer;
+  local_user = userbuffer;
+  local_home = homebuffer;
 
-  /**
-   * Quash entry point
-   *
-   * @param argc argument count from the command line
-   * @param argv argument vector from the command line
-   * @return program exit status
-   */ 
+}
+
+/**
+ * Quash entry point
+ *
+ * @param argc argument count from the command line
+ * @param argv argument vector from the command line
+ * @return program exit status
+ */ 
 int main(int argc, char** argv) {
   command_t cmd; //< Command holder argument
   storeEnv();

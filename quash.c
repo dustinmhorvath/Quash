@@ -75,6 +75,7 @@ char* local_path;
 char* local_term;
 char* local_user;
 char* local_home;
+char* local_pwd;
 
 char** str_split(char* a_str, const char a_delim){
   char** result    = 0;
@@ -118,17 +119,48 @@ char** parseCommand(char* command){
   return str_split(command, " ");
 }
 
+void removeSpaces(char* source){
+  char* i = source;
+  char* j = source;
+  while(*j != 0)
+  {
+    *i = *j++;
+    if(*i != ' ')
+      i++;
+  }
+  *i = 0;
+}
+
+void changeDirectory(char* path){
+  // Absolute path case
+  if(!strncmp(path, "/", 1)){
+    char *temp_pwd = "PWD=";
+    char *temppwdbuffer = malloc (strlen (temp_pwd) + strlen (path) + 1);
+    if (temppwdbuffer == NULL) {
+      puts("Out of memory, discarding command");
+    }
+    strcpy(temppwdbuffer, temp_pwd);
+    strcat(temppwdbuffer, path);
+    free(local_pwd);
+    local_pwd = temppwdbuffer;
+
+  }
+  else{
+    puts("I don't handle relative paths yet.");
+  }
+
+}
+
 int exec_command(char* input){
 
   char** tokens = str_split(input, '|');
-  int status;
+  pid_t parent = getpid();
   int n;
-  int io[MAXPIPES][2];//int io[2];
+  int status;
+  int io[MAXPIPES][2];
   char buf[BSIZE];
-  int first = 1;
 
   if (tokens){
-
 
     int count;
     for (count = 0; *(tokens + count); count++){
@@ -144,28 +176,34 @@ int exec_command(char* input){
     pid_t pids[count];
 
     int i;
-    //for (i = 0; *(tokens + i); i++){
     for (i = 0; i < count; i++){
 
       char** command = parseCommand( *(tokens + i) );
 
+      if(!strncmp(command[0], "cd ", 3)){
+        // Cut off the "cd "
+        char *truncated = (char*) malloc(sizeof(command) - 3);
+        strncpy(truncated, command[0] + 3, strlen(command[0]));
+        // Strip any whitespace
+        removeSpaces(truncated);
+        // Pass new string path to function
+        changeDirectory(truncated);
+      }
+
       pids[i] = fork();
-      if ( pids[i] == 0) {
+      if (pids[i] == 0){
         // Handle closing of pipes dynamically
         // first command case (closes read end)
         if(i == 0 && count > 1){
-          puts("I'm first and piping my output\n");
-          first = 0;
           for(int pipeindex = 1; pipeindex < (count - 1); pipeindex++){
             close(io[pipeindex][0]);
             close(io[pipeindex][1]);
             close(io[i][0]);
           }
           dup2(io[i][1], STDOUT_FILENO);
-        }
+          }
         // Handle last command in pipe sequence
         else if(i != 0 && i == count - 1){
-          puts("I'm last and piping my input\n");
           for(int pipeindex = 0; pipeindex < (count - 1) - 1; pipeindex++){
             close(io[pipeindex][0]);
             close(io[pipeindex][1]);
@@ -175,40 +213,49 @@ int exec_command(char* input){
         }
 
         // Special cases 
-        
-        if(!strncmp(command[0], "cd ", 3)){
-          //char *to = (char*) malloc(sizeof(command));
-          //strncpy(to, from+3, strlen(command));
 
-          puts("read cd");
+        if(!strncmp(command[0], "cd ", 3)){
+          // Cut off the "cd "
+          char *truncated = (char*) malloc(sizeof(command) - 3);
+          strncpy(truncated, command[0] + 3, strlen(command[0]));
+          // Strip any whitespace
+          removeSpaces(truncated);
+
+          changeDirectory(truncated);
         }
         else if(!strncmp(command[0], "set ", 4)){
           puts("read set");
         }
-        
+
         // If not a special case, execute using sh and env
         else{
           char *env[] = {
+            local_pwd,
             local_term,
             local_home,
             local_path,
             local_user,
-            getenv("TZ"),
-            getenv("LOGNAME"),
             0
           };
 
           char *argv[] = { "/bin/sh", "-c", command[0], 0 };
+          /*
+             if((status = execve(argv[0], &argv[0], env)) < 0){
+             puts("Error on execve.");
+             return EXIT_FAILURE;
+             }
+             */
+          execve(argv[0], &argv[0], env);
 
-          if((status = execve(argv[0], &argv[0], env)) < 0){
-            puts("Error on execve.");
-            return EXIT_FAILURE;
-          }
         }
-
+        for(int pipeindex = 0; pipeindex < (count - 1); pipeindex++){
+          close(io[pipeindex][0]);
+          close(io[pipeindex][1]);
+        }
 
         exit(0);
       }
+
       free(*(tokens + i));
     }
 
@@ -228,10 +275,12 @@ void storeEnv(){
   local_path = "PATH=";
   local_term = "TERM=";
   local_user = "USER=";
+  local_pwd = "PWD=";
   local_home = "HOME=";
   char *pathbuffer = malloc (strlen (local_path) + strlen (getenv("PATH")) + 1);
   char *termbuffer = malloc (strlen (local_term) + strlen (getenv("TERM")) + 1);
   char *userbuffer = malloc (strlen (local_user) + strlen (getenv("USER")) + 1);
+  char *pwdbuffer = malloc (strlen (local_pwd) + strlen (getenv("PWD")) + 1);
   char *homebuffer = malloc (strlen (local_home) + strlen (getenv("HOME")) + 1);
   if (homebuffer == NULL) {
     puts("Out of memory.");
@@ -240,15 +289,19 @@ void storeEnv(){
   strcpy (pathbuffer, local_path);
   strcpy (termbuffer, local_term);
   strcpy (userbuffer, local_user);
+  strcpy (pwdbuffer, local_pwd);
   strcpy (homebuffer, local_home);
   strcat(pathbuffer, getenv("PATH"));
   strcat(termbuffer, getenv("TERM"));
   strcat(userbuffer, getenv("USER"));
+  strcat(pwdbuffer, getenv("PWD"));
   strcat(homebuffer, getenv("HOME"));
   local_path = pathbuffer;
   local_term = termbuffer;
   local_user = userbuffer;
+  local_pwd = pwdbuffer;
   local_home = homebuffer;
+
 }
 
 /**

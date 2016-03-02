@@ -125,30 +125,10 @@ void removeSpaces(char* source){
   while(*j != 0)
   {
     *i = *j++;
-    if(*i != ' ')
+    if(*i != ' ' || *i != '\n' || *i != '\r')
       i++;
   }
   *i = 0;
-}
-
-void changeDirectory(char* path){
-  // Absolute path case
-  if(!strncmp(path, "/", 1)){
-    char *temp_pwd = "PWD=";
-    char *temppwdbuffer = malloc (strlen (temp_pwd) + strlen (path) + 1);
-    if (temppwdbuffer == NULL) {
-      puts("Out of memory, discarding command");
-    }
-    strcpy(temppwdbuffer, temp_pwd);
-    strcat(temppwdbuffer, path);
-    free(local_pwd);
-    local_pwd = temppwdbuffer;
-
-  }
-  else{
-    puts("I don't handle relative paths yet.");
-  }
-
 }
 
 int exec_command(char* input){
@@ -187,8 +167,9 @@ int exec_command(char* input){
         // Strip any whitespace
         removeSpaces(truncated);
         // Pass new string path to function
-        changeDirectory(truncated);
+        chdir(truncated);
       }
+
 
       pids[i] = fork();
       if (pids[i] == 0){
@@ -201,7 +182,7 @@ int exec_command(char* input){
             close(io[i][0]);
           }
           dup2(io[i][1], STDOUT_FILENO);
-          }
+        }
         // Handle last command in pipe sequence
         else if(i != 0 && i == count - 1){
           for(int pipeindex = 0; pipeindex < (count - 1) - 1; pipeindex++){
@@ -214,27 +195,19 @@ int exec_command(char* input){
 
         // Special cases 
 
-        if(!strncmp(command[0], "cd ", 3)){
-          // Cut off the "cd "
-          char *truncated = (char*) malloc(sizeof(command) - 3);
-          strncpy(truncated, command[0] + 3, strlen(command[0]));
-          // Strip any whitespace
-          removeSpaces(truncated);
-
-          changeDirectory(truncated);
-        }
-        else if(!strncmp(command[0], "set ", 4)){
+        if(!strncmp(command[0], "set ", 4)){
           puts("read set");
         }
 
         // If not a special case, execute using sh and env
         else{
+
           char *env[] = {
-            local_pwd,
             local_term,
             local_home,
             local_path,
             local_user,
+            local_pwd,
             0
           };
 
@@ -245,7 +218,9 @@ int exec_command(char* input){
              return EXIT_FAILURE;
              }
              */
+
           execve(argv[0], &argv[0], env);
+          
 
         }
         for(int pipeindex = 0; pipeindex < (count - 1); pipeindex++){

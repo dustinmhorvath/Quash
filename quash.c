@@ -148,7 +148,6 @@ void set(char* input){
       puts("Out of memory.");
       terminate();
     }
-    puts("I got here.");
     strcpy (homebuffer, input);
     free(local_home);
     local_home = homebuffer;
@@ -158,6 +157,15 @@ void set(char* input){
     puts("Invalid.");
   }
 
+}
+
+int is_empty(const char *s) {
+  while (*s != '\0') {
+    if (!isspace(*s))
+      return 0;
+    s++;
+  }
+  return 1;
 }
 
 int exec_command(char* input){
@@ -189,13 +197,18 @@ int exec_command(char* input){
 
       // Confirmed getting command names correctly after each pipe
       char* command = *(tokens + i);
-
-      if(!strncmp(command, "cd ", 3)){
+        if(!strncmp(command, "cd ", 3) || (!strncmp(command, "cd", 2) && strlen(command) == 2) ){
         // Cut off the "cd "
         char *truncated = (char*) malloc(sizeof(command) - 3);
         strncpy(truncated, command + 3, strlen(command));
         // Strip any whitespace
         removeSpaces(truncated);
+        if(is_empty(truncated)){
+          char dir[strlen(local_home) - 5];
+          strncpy(dir, local_home + 5, strlen(local_home) - 5);
+          dir[strlen(local_home) - 5] = '\0';
+          chdir(dir);
+        }
         // Pass new string path to function
         chdir(truncated);
       }
@@ -333,7 +346,6 @@ int main(int argc, char** argv) {
       arglength = arglength + strlen(argv[i]);
     }
     char *commandbuffer = malloc (arglength + 2);
-    printf("%d\n",arglength);
     for(int i = 1; i < argc; i++){
       strcat(commandbuffer, argv[i]);
       strcat(commandbuffer, " ");

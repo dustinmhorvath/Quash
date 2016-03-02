@@ -280,6 +280,24 @@ int main(int argc, char** argv) {
 
   start();
 
+  if(argc > 1){
+    int arglength = argc - 2;
+    for(int i = 1; i < argc; i++){
+      arglength = arglength + strlen(argv[i]);
+    }
+    char *commandbuffer = malloc (arglength + 2);
+    printf("%d\n",arglength);
+    for(int i = 1; i < argc; i++){
+      strcat(commandbuffer, argv[i]);
+      strcat(commandbuffer, " ");
+    }
+    exec_command(commandbuffer);
+
+
+    terminate();
+  }
+
+
   puts("Welcome to Quash!");
   puts("Type \"exit\" to quit");
   // Main execution loop

@@ -206,6 +206,7 @@ int exec_command(char* input){
         removeSpaces(truncated);
         set(truncated);
       }
+      
 
       else{
         pids[i] = fork();
@@ -216,8 +217,8 @@ int exec_command(char* input){
             for(int pipeindex = 1; pipeindex < (numbercommands - 1); pipeindex++){
               close(io[pipeindex][0]);
               close(io[pipeindex][1]);
-              close(io[i][0]);
             }
+            close(io[i][0]);
             dup2(io[i][1], STDOUT_FILENO);
           }
           // Handle last command in pipe sequence
@@ -225,8 +226,22 @@ int exec_command(char* input){
             for(int pipeindex = 0; pipeindex < (numbercommands - 1) - 1; pipeindex++){
               close(io[pipeindex][0]);
               close(io[pipeindex][1]);
-              close(io[i-1][1]);
             }
+            close(io[i-1][1]);
+            dup2(io[i-1][0], STDIN_FILENO);
+          }
+          else if(numbercommands > 1 && i != 0 && i != numbercommands - 1){
+            for(int pipeindex = 0; pipeindex < (i - 1); pipeindex++){
+              close(io[pipeindex][0]);
+              close(io[pipeindex][1]);
+            }
+            for(int pipeindex = i + 1; pipeindex < (numbercommands - 1); pipeindex++){
+              close(io[pipeindex][0]);
+              close(io[pipeindex][1]);
+            }
+            close(io[i-1][1]);
+            close(io[i][0]);
+            dup2(io[i][1], STDOUT_FILENO);
             dup2(io[i-1][0], STDIN_FILENO);
           }
 
@@ -250,8 +265,10 @@ int exec_command(char* input){
         }
 
       } // ends fork else
+      
       free(*(tokens + i));
 
+      
     }
 
     for(int pipeindex = 0; pipeindex < (numbercommands - 1); pipeindex++){
@@ -260,7 +277,6 @@ int exec_command(char* input){
     }
 
     for(int i = 0; i < numbercommands - 1; i++){
-      printf("waiting on pid %d\n", pids[i]);
       if (waitpid(pids[i], &status, 0) == -1) {
         // fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
         return EXIT_FAILURE;

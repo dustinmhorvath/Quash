@@ -259,7 +259,7 @@ int exec_command(char* input){
       close(io[pipeindex][1]);
     }
 
-    for(int i = 0; i < numbercommands; i++){
+    for(int i = 0; i < numbercommands - 1; i++){
       printf("waiting on pid %d\n", pids[i]);
       if (waitpid(pids[i], &status, 0) == -1) {
         // fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);

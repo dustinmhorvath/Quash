@@ -267,8 +267,6 @@ int exec_command(char* input){
       } // ends fork else
       
       free(*(tokens + i));
-
-      
     }
 
     for(int pipeindex = 0; pipeindex < (numbercommands - 1); pipeindex++){
@@ -283,7 +281,6 @@ int exec_command(char* input){
       } 
     }
 
-    //printf("\n");
     free(tokens);
   }
 }

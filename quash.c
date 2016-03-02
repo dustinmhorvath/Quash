@@ -25,7 +25,7 @@
  */ // NOTE: "static" causes the "running" variable to only be declared in this // compilation unit (this file and all files that include it). This is similar 
 // to private in other languages. 
 
-#define BSIZE 256
+#define BSIZE 1024
 #define MAXPIPES 12
 
 static bool running;
@@ -122,8 +122,7 @@ char** parseCommand(char* command){
 void removeSpaces(char* source){
   char* i = source;
   char* j = source;
-  while(*j != 0)
-  {
+  while(*j != 0){
     *i = *j++;
     if(*i != ' ' || *i != '\n' || *i != '\r')
       i++;
@@ -139,175 +138,161 @@ int exec_command(char* input){
   int status;
   int io[MAXPIPES][2];
   char buf[BSIZE];
+  int numbercommands = 0;
 
   if (tokens){
 
-    int count;
-    for (count = 0; *(tokens + count); count++){
+    for (numbercommands = 0; *(tokens + numbercommands); numbercommands++){
       // count the number of commands
     }
     // Declare pipe ints and instantiate pipes dynamically
-    if(count > 1){
-      for(int pipeindex = 0; pipeindex < (count - 1); pipeindex++){
+    if(numbercommands > 1){
+      for(int pipeindex = 0; pipeindex < (numbercommands - 1); pipeindex++){
         pipe(io[pipeindex]);
       }
     }
 
-    pid_t pids[count];
+    pid_t pids[numbercommands];
 
     int i;
-    for (i = 0; i < count; i++){
+    for (i = 0; i < numbercommands; i++){
 
-      char** command = parseCommand( *(tokens + i) );
-      if(!strncmp(command[0], "cd ", 3)){
+      // Confirmed getting command names correctly after each pipe
+      char* command = *(tokens + i);
+
+      if(!strncmp(command, "cd ", 3)){
         // Cut off the "cd "
         char *truncated = (char*) malloc(sizeof(command) - 3);
-        strncpy(truncated, command[0] + 3, strlen(command[0]));
+        strncpy(truncated, command + 3, strlen(command));
         // Strip any whitespace
         removeSpaces(truncated);
         // Pass new string path to function
         chdir(truncated);
-        i++;
-        count-1;
       }
 
-      else if(!strncmp(command[0], "set ", 4)){
+      else if(!strncmp(command, "set ", 4)){
         puts("read set");
       }
 
-      else if ((pids[i] = fork()) == 0){
-        // Handle closing of pipes dynamically
-        // first command case (closes read end)
-        if(i == 0 && count > 1){
-          for(int pipeindex = 1; pipeindex < (count - 1); pipeindex++){
-            close(io[pipeindex][0]);
-            close(io[pipeindex][1]);
-            close(io[i][0]);
+      else{
+        pids[i] = fork();
+        if (pids[i] == 0){
+          // Handle closing of pipes dynamically
+          // first command case (closes read end)
+          if(i == 0 && numbercommands > 1){
+            for(int pipeindex = 1; pipeindex < (numbercommands - 1); pipeindex++){
+              close(io[pipeindex][0]);
+              close(io[pipeindex][1]);
+              close(io[i][0]);
+            }
+            dup2(io[i][1], STDOUT_FILENO);
           }
-          dup2(io[i][1], STDOUT_FILENO);
-        }
-        // Handle last command in pipe sequence
-        else if(i != 0 && i == count - 1){
-          for(int pipeindex = 0; pipeindex < (count - 1) - 1; pipeindex++){
-            close(io[pipeindex][0]);
-            close(io[pipeindex][1]);
-            close(io[i-1][1]);
+          // Handle last command in pipe sequence
+          else if(i != 0 && i == numbercommands - 1){
+            for(int pipeindex = 0; pipeindex < (numbercommands - 1) - 1; pipeindex++){
+              close(io[pipeindex][0]);
+              close(io[pipeindex][1]);
+              close(io[i-1][1]);
+            }
+            dup2(io[i-1][0], STDIN_FILENO);
           }
-          dup2(io[i-1][0], STDIN_FILENO);
-        }
-
-        // Special cases 
-
-
-        // If not a special case, execute using sh and env
-        else{
 
           char *env[] = {
             local_term,
             local_home,
             local_path,
             local_user,
-            //            local_pwd,
             0
           };
 
-          char *argv[] = { "/bin/sh", "-c", command[0], 0 };
+          char *argv[] = { "/bin/sh", "-c", command, 0 };
 
           execve(argv[0], &argv[0], env);
-
-
-        }
-        for(int pipeindex = 0; pipeindex < (count - 1); pipeindex++){
-          close(io[pipeindex][0]);
-          close(io[pipeindex][1]);
+          _exit(EXIT_FAILURE);
         }
 
-        exit(0);
-        
-
-      }
-
-      free(*(tokens + i));
+      } // ends fork else
+        free(*(tokens + i));
     }
 
-    for(int i = 0; i < count; i++){
-      if ((waitpid(pids[i], &status, 0)) == -1) {
-        fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
+    for(int pipeindex = 0; pipeindex < (numbercommands - 1); pipeindex++){
+      close(io[pipeindex][0]);
+      close(io[pipeindex][1]);
+    }
+
+    for(int i = 0; i < numbercommands; i++){
+      puts("waiting on pid");
+      if (waitpid(pids[i], &status, 0) == -1) {
+        // fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
         return EXIT_FAILURE;
       }
-
     }
 
     //printf("\n");
     free(tokens);
-  }
-}
-
-void storeEnv(){
-  local_path = "PATH=";
-  local_term = "TERM=";
-  local_user = "USER=";
-  local_pwd = "PWD=";
-  local_home = "HOME=";
-  char *pathbuffer = malloc (strlen (local_path) + strlen (getenv("PATH")) + 1);
-  char *termbuffer = malloc (strlen (local_term) + strlen (getenv("TERM")) + 1);
-  char *userbuffer = malloc (strlen (local_user) + strlen (getenv("USER")) + 1);
-  char *pwdbuffer = malloc (strlen (local_pwd) + strlen (getenv("PWD")) + 1);
-  char *homebuffer = malloc (strlen (local_home) + strlen (getenv("HOME")) + 1);
-  if (homebuffer == NULL) {
-    puts("Out of memory.");
-    terminate();
-  }
-  strcpy (pathbuffer, local_path);
-  strcpy (termbuffer, local_term);
-  strcpy (userbuffer, local_user);
-  strcpy (pwdbuffer, local_pwd);
-  strcpy (homebuffer, local_home);
-  strcat(pathbuffer, getenv("PATH"));
-  strcat(termbuffer, getenv("TERM"));
-  strcat(userbuffer, getenv("USER"));
-  strcat(pwdbuffer, getenv("PWD"));
-  strcat(homebuffer, getenv("HOME"));
-  local_path = pathbuffer;
-  local_term = termbuffer;
-  local_user = userbuffer;
-  local_pwd = pwdbuffer;
-  local_home = homebuffer;
-
-}
-
-/**
- * Quash entry point
- *
- * @param argc argument count from the command line
- * @param argv argument vector from the command line
- * @return program exit status
- */ 
-
-int main(int argc, char** argv) {
-  command_t cmd; //< Command holder argument
-  storeEnv();
-
-  start();
-
-  puts("Welcome to Quash!");
-  puts("Type \"exit\" to quit");
-  // Main execution loop
-  while (is_running() && get_command(&cmd, stdin)) {
-    // NOTE: I would not recommend keeping anything inside the body of
-    // this while loop. It is just an example.
-    // The commands should be parsed, then executed.
-    if (!strcmp(cmd.cmdstr, "exit") || !strcmp(cmd.cmdstr, "quit")){
-      puts("Bye");
-      terminate(); // Exit Quash
-    }
-    else{
-      exec_command(cmd.cmdstr); 
-
-
-
-      //puts(cmd.cmdstr); // Echo the input string
     }
   }
-  return EXIT_SUCCESS;
-}
+
+  void storeEnv(){
+    local_path = "PATH=";
+    local_term = "TERM=";
+    local_user = "USER=";
+    local_home = "HOME=";
+    char *pathbuffer = malloc (strlen (local_path) + strlen (getenv("PATH")) + 1);
+    char *termbuffer = malloc (strlen (local_term) + strlen (getenv("TERM")) + 1);
+    char *userbuffer = malloc (strlen (local_user) + strlen (getenv("USER")) + 1);
+    char *homebuffer = malloc (strlen (local_home) + strlen (getenv("HOME")) + 1);
+    if (homebuffer == NULL) {
+      puts("Out of memory.");
+      terminate();
+    }
+    strcpy (pathbuffer, local_path);
+    strcpy (termbuffer, local_term);
+    strcpy (userbuffer, local_user);
+    strcpy (homebuffer, local_home);
+    strcat(pathbuffer, getenv("PATH"));
+    strcat(termbuffer, getenv("TERM"));
+    strcat(userbuffer, getenv("USER"));
+    strcat(homebuffer, getenv("HOME"));
+    local_path = pathbuffer;
+    local_term = termbuffer;
+    local_user = userbuffer;
+    local_home = homebuffer;
+
+  }
+
+  /**
+   * Quash entry point
+   *
+   * @param argc argument count from the command line
+   * @param argv argument vector from the command line
+   * @return program exit status
+   */ 
+
+  int main(int argc, char** argv) {
+    command_t cmd; //< Command holder argument
+    storeEnv();
+
+    start();
+
+    puts("Welcome to Quash!");
+    puts("Type \"exit\" to quit");
+    // Main execution loop
+    while (is_running() && get_command(&cmd, stdin)) {
+      // NOTE: I would not recommend keeping anything inside the body of
+      // this while loop. It is just an example.
+      // The commands should be parsed, then executed.
+      if (!strcmp(cmd.cmdstr, "exit") || !strcmp(cmd.cmdstr, "quit")){
+        puts("Bye");
+        terminate(); // Exit Quash
+      }
+      else{
+        exec_command(cmd.cmdstr); 
+
+
+
+        //puts(cmd.cmdstr); // Echo the input string
+      }
+    }
+    return EXIT_SUCCESS;
+  }

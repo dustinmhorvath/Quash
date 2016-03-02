@@ -197,7 +197,7 @@ int exec_command(char* input){
         }
 
         // Special cases 
-        
+
 
         // If not a special case, execute using sh and env
         else{
@@ -212,7 +212,7 @@ int exec_command(char* input){
           };
 
           char *argv[] = { "/bin/sh", "-c", command[0], 0 };
-      
+
           execve(argv[0], &argv[0], env);
 
 
@@ -223,16 +223,19 @@ int exec_command(char* input){
         }
 
         exit(0);
+        
+
       }
-      
+
       free(*(tokens + i));
     }
 
     for(int i = 0; i < count; i++){
       if ((waitpid(pids[i], &status, 0)) == -1) {
-        //fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
+        fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
         return EXIT_FAILURE;
-      } 
+      }
+
     }
 
     //printf("\n");

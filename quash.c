@@ -159,7 +159,6 @@ int exec_command(char* input){
     for (i = 0; i < count; i++){
 
       char** command = parseCommand( *(tokens + i) );
-
       if(!strncmp(command[0], "cd ", 3)){
         // Cut off the "cd "
         char *truncated = (char*) malloc(sizeof(command) - 3);
@@ -168,11 +167,15 @@ int exec_command(char* input){
         removeSpaces(truncated);
         // Pass new string path to function
         chdir(truncated);
+        i++;
+        count-1;
       }
 
+      else if(!strncmp(command[0], "set ", 4)){
+        puts("read set");
+      }
 
-      pids[i] = fork();
-      if (pids[i] == 0){
+      else if ((pids[i] = fork()) == 0){
         // Handle closing of pipes dynamically
         // first command case (closes read end)
         if(i == 0 && count > 1){
@@ -194,10 +197,7 @@ int exec_command(char* input){
         }
 
         // Special cases 
-
-        if(!strncmp(command[0], "set ", 4)){
-          puts("read set");
-        }
+        
 
         // If not a special case, execute using sh and env
         else{
@@ -207,20 +207,14 @@ int exec_command(char* input){
             local_home,
             local_path,
             local_user,
-            local_pwd,
+            //            local_pwd,
             0
           };
 
           char *argv[] = { "/bin/sh", "-c", command[0], 0 };
-          /*
-             if((status = execve(argv[0], &argv[0], env)) < 0){
-             puts("Error on execve.");
-             return EXIT_FAILURE;
-             }
-             */
-
+      
           execve(argv[0], &argv[0], env);
-          
+
 
         }
         for(int pipeindex = 0; pipeindex < (count - 1); pipeindex++){
@@ -230,13 +224,13 @@ int exec_command(char* input){
 
         exit(0);
       }
-
+      
       free(*(tokens + i));
     }
 
     for(int i = 0; i < count; i++){
       if ((waitpid(pids[i], &status, 0)) == -1) {
-        fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
+        //fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
         return EXIT_FAILURE;
       } 
     }

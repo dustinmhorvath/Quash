@@ -230,6 +230,7 @@ int exec_command(char* input){
             close(io[i-1][1]);
             dup2(io[i-1][0], STDIN_FILENO);
           }
+          // Dynamically handle all interim commands
           else if(numbercommands > 1 && i != 0 && i != numbercommands - 1){
             for(int pipeindex = 0; pipeindex < (i - 1); pipeindex++){
               close(io[pipeindex][0]);
@@ -274,7 +275,7 @@ int exec_command(char* input){
       close(io[pipeindex][1]);
     }
 
-    for(int i = 0; i < numbercommands - 1; i++){
+    for(int i = 0; i < numbercommands ; i++){
       if (waitpid(pids[i], &status, 0) == -1) {
         // fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
         return EXIT_FAILURE;

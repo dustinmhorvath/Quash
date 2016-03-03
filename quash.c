@@ -191,6 +191,21 @@ int is_empty(const char *s) {
   return 1;
 }
 
+void checkJobs(){
+  int status;
+  for(int i = background_job_count - 1; i >= 0; i--){
+    waitpid(background_job_pids[i], &status, WNOHANG);
+    printf("Job %d exited with status %d\n", background_job_pids[i], status);
+    if(status == 0){
+      for(int job = i + 1; job < background_job_count; job++){
+        background_job_pids[i-1] = background_job_pids[i];
+      }
+
+      background_job_count--;
+    }
+  }
+}
+
 int exec_command(char* input){
 
   char** tokens = str_split(input, '|');
@@ -251,9 +266,10 @@ int exec_command(char* input){
         removeSpaces(truncated);
         set(truncated);
       }
-
-            
-
+      // Check for jobs
+      else if(!strncmp(command, "jobs", 4)){
+        checkJobs();
+      }
       else{
         pids[i] = fork();
         if (pids[i] == 0){
@@ -427,6 +443,21 @@ int main(int argc, char** argv) {
     else if (cmd.cmdstr[0] != '\0'){
         exec_command(cmd.cmdstr); 
 
+//        checkJobs();
+        
+/*        int status;
+        for(int i = 0; i < background_job_count; i++){
+          waitpid(background_job_pids[i], &status, WNOHANG);
+          printf("Job %d exited with status %d\n", background_job_pids[i], status);
+          if(status == 0){
+            for(int job = i+1; job < background_job_count; job++){
+              background_job_pids[i-1] = background_job_pids[i];
+            }
+            background_job_count--;
+          }
+
+        }
+*/
 
 
       //puts(cmd.cmdstr); // Echo the input string

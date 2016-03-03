@@ -112,6 +112,16 @@ char** str_split(char* a_str, const char a_delim){
   return result;
 }
 
+void remove_all_chars(char* str, char c) {
+  char *pr = str, *pw = str;
+  while (*pr) {
+    *pw = *pr++;
+    pw += (*pw != c);
+  }
+  *pw = '\0';
+}
+
+
 char** parseCommand(char* command){
   return str_split(command, " ");
 }
@@ -155,6 +165,19 @@ void set(char* input){
 
 }
 
+bool hasChars(char* str, char* chars){
+  char* c = str;
+  while (*c){
+    if (strchr(chars, *c)){
+      return true;
+    }
+
+    c++;
+  }
+
+  return false;
+}
+
 int is_empty(const char *s) {
   while (*s != '\0') {
     if (!isspace(*s))
@@ -190,9 +213,15 @@ int exec_command(char* input){
 
     int i;
     for (i = 0; i < numbercommands; i++){
+      int background = 0;
 
       // Confirmed getting command names correctly after each pipe
       char* command = *(tokens + i);
+
+      if(hasChars(command, "&")){
+        remove_all_chars(command, '&');
+        background = 1;
+      }
 
       // Checks for cd. looks for no-space version too
       if(!strncmp(command, "cd ", 3) || (!strncmp(command, "cd", 2) && strlen(command) == 2) ){
@@ -218,7 +247,8 @@ int exec_command(char* input){
         removeSpaces(truncated);
         set(truncated);
       }
-      
+
+            
 
       else{
         pids[i] = fork();
@@ -266,6 +296,12 @@ int exec_command(char* input){
             0
           };
 
+          if(background == 1){
+            setpgid(0, 0);
+            signal(SIGTTOU, SIG_IGN);
+            tcsetpgrp(0, pids[i]);
+          }
+
           char *argv[] = { "/bin/sh", "-c", command, 0 };
 
           status = execve(argv[0], &argv[0], env);
@@ -289,7 +325,7 @@ int exec_command(char* input){
 
     for(int i = 0; i < numbercommands ; i++){
       if (waitpid(pids[i], &status, 0) == -1) {
-        fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
+        //fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
         return EXIT_FAILURE;
       } 
     }
@@ -367,8 +403,8 @@ int main(int argc, char** argv) {
       puts("Bye");
       terminate(); // Exit Quash
     }
-    else{
-      exec_command(cmd.cmdstr); 
+    else if (cmd.cmdstr[0] != '\0'){
+        exec_command(cmd.cmdstr); 
 
 
 

@@ -62,9 +62,9 @@ bool get_command(command_t* cmd, FILE* in) {
       cmd->cmdstr[len - 1] = '\0';
       cmd->cmdlen = len - 1;
     }
-    else
+    else {
       cmd->cmdlen = len;
-
+    }
     return true;
   }
   else
@@ -96,9 +96,7 @@ char** str_split(char* a_str, const char a_delim){
 
   count += last_comma < (a_str + strlen(a_str) - 1);
   count++;
-
   result = malloc(sizeof(char*) * count);
-
   if (result){
     size_t idx  = 0;
     char* token = strtok(a_str, delim);
@@ -111,7 +109,6 @@ char** str_split(char* a_str, const char a_delim){
     assert(idx == count - 1);
     *(result + idx) = 0;
   }
-
   return result;
 }
 
@@ -151,7 +148,6 @@ void set(char* input){
     strcpy (homebuffer, input);
     free(local_home);
     local_home = homebuffer;
-    //local_home = input;
   }
   else{
     puts("Invalid.");
@@ -293,7 +289,7 @@ int exec_command(char* input){
 
     for(int i = 0; i < numbercommands ; i++){
       if (waitpid(pids[i], &status, 0) == -1) {
-        // fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
+        fprintf(stderr, "Process %d encountered an error. ERROR%d", i, errno);
         return EXIT_FAILURE;
       } 
     }

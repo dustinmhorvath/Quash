@@ -27,6 +27,7 @@
 
 #define BSIZE 1024
 #define MAXPIPES 12
+#define MAXJOBS 20
 
 static bool running;
 
@@ -76,6 +77,8 @@ char* local_term;
 char* local_user;
 char* local_home;
 char* local_pwd;
+int background_job_count = 0;
+int* background_job_pids[MAXJOBS];
 
 char** str_split(char* a_str, const char a_delim){
   char** result    = 0;
@@ -165,6 +168,7 @@ void set(char* input){
 
 }
 
+// Returns true if any of the characters in 'chars' are inside 'str'
 bool hasChars(char* str, char* chars){
   char* c = str;
   while (*c){
@@ -296,8 +300,9 @@ int exec_command(char* input){
             0
           };
 
+          // Special handling for background jobs          
           if(background == 1){
-            setpgid(0, 0);
+                        setpgid(0, 0);
             signal(SIGTTOU, SIG_IGN);
             tcsetpgrp(0, pids[i]);
           }
@@ -315,6 +320,22 @@ int exec_command(char* input){
 
       } // ends fork else
       
+      if(background == 1){
+        /*int temp[background_job_count + 1];
+        for(int j = 0; j < background_job_count; j++){
+          temp[j] = background_job_pids[j];
+        }
+        temp[background_job_count] = pids[i];
+        background_job_pids = temp;*/
+        background_job_count++;
+        background_job_pids[background_job_count - 1] = pids[i];
+        for(int jobs = 0; jobs < background_job_count; jobs++){
+          printf("[%d] %d\n", jobs + 1, background_job_pids[jobs]);
+        }
+
+
+      }
+
       free(*(tokens + i));
     }
 
